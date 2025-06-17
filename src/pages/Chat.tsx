@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, CircuitBreaker } from "lucide-react";
+import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -344,7 +344,7 @@ const Chat = () => {
                     className={isEmergencyBreak ? "bg-red-50 border-red-200" : ""}
                     title="Emergency Break"
                   >
-                    <CircuitBreaker className="w-4 h-4" />
+                    <Zap className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={handleSendMessage}
