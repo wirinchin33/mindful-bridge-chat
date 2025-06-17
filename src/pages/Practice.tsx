@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ArrowLeft, MessageSquare, Brain, Target, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -98,13 +97,13 @@ const Practice = () => {
     });
   };
 
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
     return "text-red-600";
   };
 
-  const getScoreBg = (score) => {
+  const getScoreBg = (score: number) => {
     if (score >= 80) return "bg-green-100";
     if (score >= 60) return "bg-yellow-100";
     return "bg-red-100";
@@ -264,9 +263,9 @@ const Practice = () => {
                   {/* Scores */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {Object.entries(feedback.scores).map(([key, score]) => (
-                      <div key={key} className={`text-center p-3 rounded-lg ${getScoreBg(score)}`}>
-                        <div className={`text-2xl font-bold ${getScoreColor(score)}`}>
-                          {Math.round(score)}
+                      <div key={key} className={`text-center p-3 rounded-lg ${getScoreBg(score as number)}`}>
+                        <div className={`text-2xl font-bold ${getScoreColor(score as number)}`}>
+                          {Math.round(score as number)}
                         </div>
                         <div className="text-sm capitalize font-medium text-slate-700">
                           {key}

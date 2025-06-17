@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -205,7 +204,6 @@ const Chat = () => {
                         {message.sender}
                       </span>
                       <Badge
-                        size="sm"
                         className={`ml-2 ${getSensitivityColor(message.sensitivity)}`}
                       >
                         {getSensitivityIcon(message.sensitivity)}
