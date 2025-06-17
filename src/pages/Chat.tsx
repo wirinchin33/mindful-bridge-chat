@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, CircuitBreaker } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ const Chat = () => {
   const [currentMessage, setCurrentMessage] = useState("");
   const [isPaused, setIsPaused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState("");
+  const [isEmergencyBreak, setIsEmergencyBreak] = useState(false);
 
   const getSensitivityColor = (level) => {
     switch (level) {
@@ -76,8 +78,19 @@ const Chat = () => {
     return "green";
   };
 
+  const getInputBorderColor = (sensitivity) => {
+    switch (sensitivity) {
+      case "green": return "border-green-300 focus-visible:ring-green-500";
+      case "yellow": return "border-yellow-300 focus-visible:ring-yellow-500";
+      case "red": return "border-red-300 focus-visible:ring-red-500";
+      default: return "border-input";
+    }
+  };
+
+  const currentSensitivity = analyzeSensitivity(currentMessage);
+
   const handleSendMessage = () => {
-    if (!currentMessage.trim()) return;
+    if (!currentMessage.trim() || isEmergencyBreak) return;
     
     const sensitivity = analyzeSensitivity(currentMessage);
     const newMessage = {
@@ -91,6 +104,8 @@ const Chat = () => {
 
     setMessages(prev => [...prev, newMessage]);
     setCurrentMessage("");
+    setShowSuggestions(false);
+    setAiSuggestion("");
 
     // Simulate AI response
     setTimeout(() => {
@@ -113,18 +128,54 @@ const Chat = () => {
     }, 1000);
   };
 
-  const refineMessage = () => {
-    const suggestions = [
+  const handleAiRephrase = () => {
+    if (!currentMessage.trim()) return;
+    
+    const rephrasedVersions = [
       "I've been experiencing some challenges with work and personal commitments lately, and I'm feeling a bit overwhelmed.",
       "I'm going through a busy period right now and could use some support in managing my stress levels.",
       "I'm dealing with several responsibilities at the moment and would appreciate some guidance on coping strategies."
     ];
     
+    const rephrased = rephrasedVersions[Math.floor(Math.random() * rephrasedVersions.length)];
+    setCurrentMessage(rephrased);
+    
     toast({
-      title: "Message Refinement Suggestions",
-      description: "Here are some refined versions of your message.",
+      title: "Message Rephrased",
+      description: "Your message has been refined for better communication.",
     });
+  };
+
+  const handleAiSuggest = () => {
+    const suggestions = [
+      "I'm feeling a bit overwhelmed today. Could you help me process some thoughts?",
+      "I'd like to talk through something that's been on my mind lately.",
+      "I'm looking for some guidance on how to handle a situation I'm facing.",
+      "Could we discuss some strategies for managing stress?",
+      "I'm having difficulty expressing how I feel about something."
+    ];
+    
+    const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+    setAiSuggestion(suggestion);
     setShowSuggestions(true);
+    
+    toast({
+      title: "AI Suggestion",
+      description: "Here's a suggested message to help you get started.",
+    });
+  };
+
+  const handleEmergencyBreak = () => {
+    setIsEmergencyBreak(!isEmergencyBreak);
+    setIsPaused(!isEmergencyBreak);
+    
+    toast({
+      title: isEmergencyBreak ? "Emergency Break Lifted" : "Emergency Break Activated",
+      description: isEmergencyBreak 
+        ? "You can now continue communicating. Take your time." 
+        : "Communication is paused. Take a moment to breathe and center yourself.",
+      variant: isEmergencyBreak ? "default" : "destructive"
+    });
   };
 
   const togglePause = () => {
@@ -157,6 +208,11 @@ const Chat = () => {
                 <Pause className="w-4 h-4 mr-2" />
                 {isPaused ? "Paused" : "Pause"}
               </Button>
+              {isEmergencyBreak && (
+                <Badge className="bg-red-100 text-red-800 border-red-300">
+                  Emergency Break Active
+                </Badge>
+              )}
               <div className="text-sm text-slate-600">
                 AI Support Active
               </div>
@@ -232,20 +288,19 @@ const Chat = () => {
         <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="space-y-3">
-              {showSuggestions && (
+              {showSuggestions && aiSuggestion && (
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">Suggested Refinements:</h4>
-                  <div className="space-y-2">
-                    <button
-                      className="block w-full text-left text-sm p-2 bg-white rounded border hover:bg-blue-50 transition-colors"
-                      onClick={() => {
-                        setCurrentMessage("I've been experiencing some challenges with work and personal commitments lately, and I'm feeling a bit overwhelmed.");
-                        setShowSuggestions(false);
-                      }}
-                    >
-                      "I've been experiencing some challenges with work and personal commitments lately, and I'm feeling a bit overwhelmed."
-                    </button>
-                  </div>
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">AI Suggestion:</h4>
+                  <button
+                    className="block w-full text-left text-sm p-2 bg-white rounded border hover:bg-blue-50 transition-colors"
+                    onClick={() => {
+                      setCurrentMessage(aiSuggestion);
+                      setShowSuggestions(false);
+                      setAiSuggestion("");
+                    }}
+                  >
+                    "{aiSuggestion}"
+                  </button>
                 </div>
               )}
               
@@ -253,9 +308,9 @@ const Chat = () => {
                 <Textarea
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder={isPaused ? "Chat is paused..." : "Type your message here..."}
-                  disabled={isPaused}
-                  className="flex-1 min-h-[60px] resize-none"
+                  placeholder={isEmergencyBreak ? "Emergency break is active..." : isPaused ? "Chat is paused..." : "Type your message here..."}
+                  disabled={isPaused || isEmergencyBreak}
+                  className={`flex-1 min-h-[60px] resize-none transition-colors ${getInputBorderColor(currentSensitivity)}`}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -265,16 +320,35 @@ const Chat = () => {
                 />
                 <div className="flex flex-col space-y-2">
                   <Button
-                    onClick={refineMessage}
+                    onClick={handleAiRephrase}
                     variant="outline"
                     size="sm"
-                    disabled={!currentMessage.trim() || isPaused}
+                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak}
+                    title="AI Rephrase"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <Bot className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={handleAiSuggest}
+                    variant="outline"
+                    size="sm"
+                    disabled={isPaused || isEmergencyBreak}
+                    title="AI Suggest"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={handleEmergencyBreak}
+                    variant="outline"
+                    size="sm"
+                    className={isEmergencyBreak ? "bg-red-50 border-red-200" : ""}
+                    title="Emergency Break"
+                  >
+                    <CircuitBreaker className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!currentMessage.trim() || isPaused}
+                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak}
                     className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
                   >
                     <Send className="w-4 h-4" />
