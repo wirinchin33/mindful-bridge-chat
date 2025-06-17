@@ -9,7 +9,155 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      assessments: {
+        Row: {
+          answer_value: string
+          completed_at: string | null
+          id: string
+          question_id: string
+          section_title: string
+          user_id: string | null
+        }
+        Insert: {
+          answer_value: string
+          completed_at?: string | null
+          id?: string
+          question_id: string
+          section_title: string
+          user_id?: string | null
+        }
+        Update: {
+          answer_value?: string
+          completed_at?: string | null
+          id?: string
+          question_id?: string
+          section_title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comfort_zones: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string | null
+          zone_text: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          zone_text: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          zone_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comfort_zones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          communication_style: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          communication_style?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          communication_style?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sensitive_triggers: {
+        Row: {
+          created_at: string | null
+          id: string
+          trigger_text: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          trigger_text: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          trigger_text?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensitive_triggers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          preference_text: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          preference_text: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          preference_text?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

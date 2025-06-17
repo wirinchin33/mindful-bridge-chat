@@ -1,9 +1,31 @@
 
 import { Link } from "react-router-dom";
-import { User, MessageSquare, Brain, FileText } from "lucide-react";
+import { User, MessageSquare, Brain, FileText, LogOut } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
@@ -18,12 +40,26 @@ const Index = () => {
                 MindBridge
               </h1>
             </div>
-            <nav className="hidden md:flex space-x-6">
-              <Link to="/profile" className="text-slate-600 hover:text-blue-600 transition-colors">Profile</Link>
-              <Link to="/assessment" className="text-slate-600 hover:text-blue-600 transition-colors">Assessment</Link>
-              <Link to="/chat" className="text-slate-600 hover:text-blue-600 transition-colors">Chat</Link>
-              <Link to="/practice" className="text-slate-600 hover:text-blue-600 transition-colors">Practice</Link>
-            </nav>
+            <div className="flex items-center space-x-4">
+              <nav className="hidden md:flex space-x-6">
+                <Link to="/profile" className="text-slate-600 hover:text-blue-600 transition-colors">Profile</Link>
+                <Link to="/assessment" className="text-slate-600 hover:text-blue-600 transition-colors">Assessment</Link>
+                <Link to="/chat" className="text-slate-600 hover:text-blue-600 transition-colors">Chat</Link>
+                <Link to="/practice" className="text-slate-600 hover:text-blue-600 transition-colors">Practice</Link>
+              </nav>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-slate-600">Welcome, {user?.email}</span>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="text-slate-600 hover:text-red-600"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </header>
