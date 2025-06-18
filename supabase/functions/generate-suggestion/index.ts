@@ -17,9 +17,24 @@ serve(async (req) => {
   try {
     const { chatHistory } = await req.json();
 
-    const conversationContext = chatHistory.map(msg => 
-      `${msg.sender}: ${msg.content}`
-    ).join('\n');
+    if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
+      return new Response(JSON.stringify({ suggestion: 'How are you feeling today?' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      return new Response(JSON.stringify({ suggestion: 'How are you feeling today?' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Create context from chat history
+    const conversationContext = chatHistory
+      .slice(-6) // Last 6 messages for context
+      .map(msg => `${msg.sender}: ${msg.content}`)
+      .join('\n');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -32,28 +47,43 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Based on the conversation history, suggest a thoughtful and supportive message that the user could send next. The suggestion should be empathetic, constructive, and help continue the conversation in a positive way.'
+            content: 'Based on the conversation history, suggest a thoughtful and empathetic response that the user could send. The suggestion should be supportive, understanding, and help continue meaningful dialogue. Keep it concise and natural.'
           },
           {
             role: 'user',
-            content: `Conversation history:\n${conversationContext}\n\nPlease suggest what the user could say next.`
+            content: `Conversation history:\n${conversationContext}\n\nSuggest what the user might want to say next:`
           }
         ],
-        max_tokens: 150,
+        max_tokens: 100,
         temperature: 0.8
       }),
     });
 
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status, response.statusText);
+      return new Response(JSON.stringify({ suggestion: 'How are you feeling today?' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await response.json();
-    const suggestion = data.choices[0].message.content;
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Unexpected OpenAI response structure:', data);
+      return new Response(JSON.stringify({ suggestion: 'How are you feeling today?' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const suggestion = data.choices[0].message.content.trim();
 
     return new Response(JSON.stringify({ suggestion }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in generate-suggestion function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ suggestion: 'How are you feeling today?' }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

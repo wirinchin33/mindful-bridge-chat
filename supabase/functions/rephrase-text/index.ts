@@ -17,6 +17,19 @@ serve(async (req) => {
   try {
     const { text } = await req.json();
 
+    if (!text || text.trim() === '') {
+      return new Response(JSON.stringify({ rephrasedText: text || '' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      return new Response(JSON.stringify({ rephrasedText: text }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -28,7 +41,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Rephrase the given text to be more constructive, clear, and emotionally balanced while maintaining the original meaning. Make it sound more professional and thoughtful.'
+            content: 'Rephrase the given text to be more clear, empathetic, and supportive while maintaining the original meaning. Keep the same tone but make it more emotionally intelligent.'
           },
           {
             role: 'user',
@@ -40,16 +53,31 @@ serve(async (req) => {
       }),
     });
 
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status, response.statusText);
+      return new Response(JSON.stringify({ rephrasedText: text }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await response.json();
-    const rephrasedText = data.choices[0].message.content;
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Unexpected OpenAI response structure:', data);
+      return new Response(JSON.stringify({ rephrasedText: text }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const rephrasedText = data.choices[0].message.content.trim();
 
     return new Response(JSON.stringify({ rephrasedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in rephrase-text function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ rephrasedText: text || '' }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

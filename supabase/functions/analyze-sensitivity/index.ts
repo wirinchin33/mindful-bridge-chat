@@ -17,6 +17,19 @@ serve(async (req) => {
   try {
     const { text } = await req.json();
 
+    if (!text || text.trim() === '') {
+      return new Response(JSON.stringify({ sensitivity: 'green' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      return new Response(JSON.stringify({ sensitivity: 'green' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -40,16 +53,33 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
-    const sensitivity = data.choices[0].message.content.toLowerCase().trim();
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status, response.statusText);
+      return new Response(JSON.stringify({ sensitivity: 'green' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    return new Response(JSON.stringify({ sensitivity }), {
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Unexpected OpenAI response structure:', data);
+      return new Response(JSON.stringify({ sensitivity: 'green' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const sensitivity = data.choices[0].message.content.toLowerCase().trim();
+    const validSensitivities = ['green', 'yellow', 'red'];
+    const finalSensitivity = validSensitivities.includes(sensitivity) ? sensitivity : 'green';
+
+    return new Response(JSON.stringify({ sensitivity: finalSensitivity }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in analyze-sensitivity function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ sensitivity: 'green' }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
