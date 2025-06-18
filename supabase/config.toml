@@ -1,1 +1,92 @@
-project_id = "veojetlvpyhtsfmkocgo"
+
+project_id = "fscemhicjyxejfvrbcly"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+enabled = true
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_parameter_status = {}
+
+[realtime]
+enabled = true
+ip_version = "ipv6"
+port = 54324
+max_header_length = 4096
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54321
+file_size_limit = "50MiB"
+buckets = []
+
+[functions.analyze-sensitivity]
+verify_jwt = false
+
+[functions.rephrase-text]
+verify_jwt = false
+
+[functions.generate-suggestion]
+verify_jwt = false
+
+[auth]
+enabled = true
+port = 54321
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+security_update_password_require_reauthentication = true
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+password_min_length = 6
+external_email_enabled = true
+external_phone_enabled = true
+sms_provider = "twilio"
+sms_max_frequency = 60
+external_providers_enabled = true
+external_oauth_providers = []
+
+[auth.email]
+enabled = true
+smtp_admin_email = "admin@example.com"
+smtp_host = "127.0.0.1"
+smtp_port = 54325
+smtp_user = "fake_mail_user"
+smtp_pass = "fake_mail_password"
+smtp_sender_name = "fake_sender"
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+port = 54321
+inspector_port = 54321
+
+[analytics]
+enabled = false

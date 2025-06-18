@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useOpenAI } from "@/hooks/useOpenAI";
 
 const Chat = () => {
   const { toast } = useToast();
+  const { analyzeSensitivity, rephraseText, generateSuggestion } = useOpenAI();
+  
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -37,12 +41,28 @@ const Chat = () => {
   ]);
   
   const [currentMessage, setCurrentMessage] = useState("");
+  const [currentSensitivity, setCurrentSensitivity] = useState("green");
   const [isPaused, setIsPaused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [isEmergencyBreak, setIsEmergencyBreak] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const getSensitivityColor = (level) => {
+  // Real-time sensitivity analysis
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (currentMessage.trim()) {
+        const sensitivity = await analyzeSensitivity(currentMessage);
+        setCurrentSensitivity(sensitivity);
+      } else {
+        setCurrentSensitivity("green");
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentMessage, analyzeSensitivity]);
+
+  const getSensitivityColor = (level: string) => {
     switch (level) {
       case "green": return "bg-green-100 border-green-300 text-green-800";
       case "yellow": return "bg-yellow-100 border-yellow-300 text-yellow-800";
@@ -51,7 +71,7 @@ const Chat = () => {
     }
   };
 
-  const getSensitivityIcon = (level) => {
+  const getSensitivityIcon = (level: string) => {
     switch (level) {
       case "green": return <CheckCircle className="w-4 h-4" />;
       case "yellow": return <AlertTriangle className="w-4 h-4" />;
@@ -60,25 +80,7 @@ const Chat = () => {
     }
   };
 
-  const analyzeSensitivity = (content) => {
-    // Simple sensitivity analysis (in real app, this would use AI)
-    const sensitiveWords = ["stressed", "anxious", "depressed", "angry", "hurt", "overwhelming"];
-    const highRiskWords = ["hate", "terrible", "awful", "disaster"];
-    
-    const hasHighRisk =content.split(' ').some(word => 
-      highRiskWords.some(risk => word.toLowerCase().includes(risk))
-    );
-    
-    const hasSensitive = content.split(' ').some(word => 
-      sensitiveWords.some(sensitive => word.toLowerCase().includes(sensitive))
-    );
-    
-    if (hasHighRisk) return "red";
-    if (hasSensitive) return "yellow";
-    return "green";
-  };
-
-  const getInputBorderColor = (sensitivity) => {
+  const getInputBorderColor = (sensitivity: string) => {
     switch (sensitivity) {
       case "green": return "border-green-300 focus-visible:ring-green-500";
       case "yellow": return "border-yellow-300 focus-visible:ring-yellow-500";
@@ -87,12 +89,10 @@ const Chat = () => {
     }
   };
 
-  const currentSensitivity = analyzeSensitivity(currentMessage);
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!currentMessage.trim() || isEmergencyBreak) return;
     
-    const sensitivity = analyzeSensitivity(currentMessage);
+    const sensitivity = await analyzeSensitivity(currentMessage);
     const newMessage = {
       id: messages.length + 1,
       sender: "You",
@@ -128,41 +128,39 @@ const Chat = () => {
     }, 1000);
   };
 
-  const handleAiRephrase = () => {
-    if (!currentMessage.trim()) return;
+  const handleAiRephrase = async () => {
+    if (!currentMessage.trim() || isLoading) return;
     
-    const rephrasedVersions = [
-      "I've been experiencing some challenges with work and personal commitments lately, and I'm feeling a bit overwhelmed.",
-      "I'm going through a busy period right now and could use some support in managing my stress levels.",
-      "I'm dealing with several responsibilities at the moment and would appreciate some guidance on coping strategies."
-    ];
-    
-    const rephrased = rephrasedVersions[Math.floor(Math.random() * rephrasedVersions.length)];
-    setCurrentMessage(rephrased);
-    
-    toast({
-      title: "Message Rephrased",
-      description: "Your message has been refined for better communication.",
-    });
+    setIsLoading(true);
+    try {
+      const rephrased = await rephraseText(currentMessage);
+      setCurrentMessage(rephrased);
+      
+      toast({
+        title: "Message Rephrased",
+        description: "Your message has been refined for better communication.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAiSuggest = () => {
-    const suggestions = [
-      "I'm feeling a bit overwhelmed today. Could you help me process some thoughts?",
-      "I'd like to talk through something that's been on my mind lately.",
-      "I'm looking for some guidance on how to handle a situation I'm facing.",
-      "Could we discuss some strategies for managing stress?",
-      "I'm having difficulty expressing how I feel about something."
-    ];
+  const handleAiSuggest = async () => {
+    if (isLoading) return;
     
-    const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-    setAiSuggestion(suggestion);
-    setShowSuggestions(true);
-    
-    toast({
-      title: "AI Suggestion",
-      description: "Here's a suggested message to help you get started.",
-    });
+    setIsLoading(true);
+    try {
+      const suggestion = await generateSuggestion(messages);
+      setAiSuggestion(suggestion);
+      setShowSuggestions(true);
+      
+      toast({
+        title: "AI Suggestion",
+        description: "Here's a suggested message to help you get started.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEmergencyBreak = () => {
@@ -323,19 +321,19 @@ const Chat = () => {
                     onClick={handleAiRephrase}
                     variant="outline"
                     size="sm"
-                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak}
+                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak || isLoading}
                     title="AI Rephrase"
                   >
-                    <Bot className="w-4 h-4" />
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
                   </Button>
                   <Button
                     onClick={handleAiSuggest}
                     variant="outline"
                     size="sm"
-                    disabled={isPaused || isEmergencyBreak}
+                    disabled={isPaused || isEmergencyBreak || isLoading}
                     title="AI Suggest"
                   >
-                    <Lightbulb className="w-4 h-4" />
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                   </Button>
                   <Button
                     onClick={handleEmergencyBreak}
