@@ -19,7 +19,6 @@ const Chat = () => {
       sender: "AI Assistant",
       content: "Hello! I'm here to help you communicate safely and effectively. How are you feeling today?",
       timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      sensitivity: "green",
       isAI: true
     },
     {
@@ -27,7 +26,6 @@ const Chat = () => {
       sender: "You",
       content: "I've been feeling a bit overwhelmed lately with work and personal stuff.",
       timestamp: new Date(Date.now() - 1000 * 60 * 3),
-      sensitivity: "yellow",
       isAI: false
     },
     {
@@ -35,7 +33,6 @@ const Chat = () => {
       sender: "AI Assistant",
       content: "I understand that feeling overwhelmed can be really challenging. It sounds like you have a lot on your plate right now. Would you like to talk through what's contributing to these feelings, or would you prefer some strategies for managing overwhelm?",
       timestamp: new Date(Date.now() - 1000 * 60 * 2),
-      sensitivity: "green",
       isAI: true
     }
   ]);
@@ -47,17 +44,26 @@ const Chat = () => {
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [isEmergencyBreak, setIsEmergencyBreak] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Real-time sensitivity analysis
+  // Real-time sensitivity analysis with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       if (currentMessage.trim()) {
-        const sensitivity = await analyzeSensitivity(currentMessage);
-        setCurrentSensitivity(sensitivity);
+        setIsAnalyzing(true);
+        try {
+          const sensitivity = await analyzeSensitivity(currentMessage);
+          setCurrentSensitivity(sensitivity);
+        } catch (error) {
+          console.error('Failed to analyze sensitivity:', error);
+          setCurrentSensitivity("green");
+        } finally {
+          setIsAnalyzing(false);
+        }
       } else {
         setCurrentSensitivity("green");
       }
-    }, 500);
+    }, 1000); // Increased debounce time to 1 second to avoid rate limiting
 
     return () => clearTimeout(timeoutId);
   }, [currentMessage, analyzeSensitivity]);
@@ -92,18 +98,17 @@ const Chat = () => {
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || isEmergencyBreak) return;
     
-    const sensitivity = await analyzeSensitivity(currentMessage);
     const newMessage = {
       id: messages.length + 1,
       sender: "You",
       content: currentMessage,
       timestamp: new Date(),
-      sensitivity,
       isAI: false
     };
 
     setMessages(prev => [...prev, newMessage]);
     setCurrentMessage("");
+    setCurrentSensitivity("green");
     setShowSuggestions(false);
     setAiSuggestion("");
 
@@ -118,9 +123,8 @@ const Chat = () => {
       const aiResponse = {
         id: messages.length + 2,
         sender: "AI Assistant",
-        content: responses[sensitivity] || "I'm here to listen and support you.",
+        content: responses[currentSensitivity] || "I'm here to listen and support you.",
         timestamp: new Date(),
-        sensitivity: "green",
         isAI: true
       };
 
@@ -140,6 +144,13 @@ const Chat = () => {
         title: "Message Rephrased",
         description: "Your message has been refined for better communication.",
       });
+    } catch (error) {
+      console.error('Failed to rephrase:', error);
+      toast({
+        title: "Error",
+        description: "Failed to rephrase message. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -150,13 +161,22 @@ const Chat = () => {
     
     setIsLoading(true);
     try {
-      const suggestion = await generateSuggestion(messages);
+      // Send last 10 messages for context
+      const recentMessages = messages.slice(-10);
+      const suggestion = await generateSuggestion(recentMessages);
       setAiSuggestion(suggestion);
       setShowSuggestions(true);
       
       toast({
         title: "AI Suggestion",
         description: "Here's a suggested message to help you get started.",
+      });
+    } catch (error) {
+      console.error('Failed to generate suggestion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate suggestion. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -257,11 +277,6 @@ const Chat = () => {
                       <span className="text-sm font-medium text-slate-600">
                         {message.sender}
                       </span>
-                      <Badge
-                        className={`ml-2 ${getSensitivityColor(message.sensitivity)}`}
-                      >
-                        {getSensitivityIcon(message.sensitivity)}
-                      </Badge>
                     </div>
                     <div
                       className={`p-3 rounded-lg ${
@@ -303,19 +318,26 @@ const Chat = () => {
               )}
               
               <div className="flex space-x-2">
-                <Textarea
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder={isEmergencyBreak ? "Emergency break is active..." : isPaused ? "Chat is paused..." : "Type your message here..."}
-                  disabled={isPaused || isEmergencyBreak}
-                  className={`flex-1 min-h-[60px] resize-none transition-colors ${getInputBorderColor(currentSensitivity)}`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
+                <div className="flex-1 relative">
+                  <Textarea
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder={isEmergencyBreak ? "Emergency break is active..." : isPaused ? "Chat is paused..." : "Type your message here..."}
+                    disabled={isPaused || isEmergencyBreak}
+                    className={`min-h-[60px] resize-none transition-colors ${getInputBorderColor(currentSensitivity)}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  {isAnalyzing && (
+                    <div className="absolute top-2 right-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-col space-y-2">
                   <Button
                     onClick={handleAiRephrase}
