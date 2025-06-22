@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -44,6 +45,7 @@ const Chat = () => {
   const [isEmergencyBreak, setIsEmergencyBreak] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRephrasing, setIsRephrasing] = useState(false);
   
   // Add ref to track the last analyzed message
   const lastAnalyzedMessage = useRef("");
@@ -138,18 +140,29 @@ const Chat = () => {
   };
 
   const handleAiRephrase = async () => {
-    if (!currentMessage.trim() || isLoading) return;
+    if (!currentMessage.trim() || isRephrasing) return;
     
-    setIsLoading(true);
+    console.log('Starting rephrase for message:', currentMessage);
+    setIsRephrasing(true);
+    
     try {
       const rephrased = await rephraseText(currentMessage);
-      setCurrentMessage(rephrased);
-      lastAnalyzedMessage.current = ""; // Reset so the rephrased message gets analyzed
+      console.log('Rephrased result:', rephrased);
       
-      toast({
-        title: "Message Rephrased",
-        description: "Your message has been refined for better communication.",
-      });
+      if (rephrased && rephrased !== currentMessage) {
+        setCurrentMessage(rephrased);
+        lastAnalyzedMessage.current = ""; // Reset so the rephrased message gets analyzed
+        
+        toast({
+          title: "Message Rephrased",
+          description: "Your message has been refined for better communication.",
+        });
+      } else {
+        toast({
+          title: "No Changes Made",
+          description: "The message is already well-phrased.",
+        });
+      }
     } catch (error) {
       console.error('Failed to rephrase:', error);
       toast({
@@ -158,7 +171,7 @@ const Chat = () => {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsRephrasing(false);
     }
   };
 
@@ -339,7 +352,7 @@ const Chat = () => {
                       }
                     }}
                   />
-                  {isAnalyzing && (
+                  {(isAnalyzing || isRephrasing) && (
                     <div className="absolute top-2 right-2">
                       <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
                     </div>
@@ -350,10 +363,10 @@ const Chat = () => {
                     onClick={handleAiRephrase}
                     variant="outline"
                     size="sm"
-                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak || isLoading}
+                    disabled={!currentMessage.trim() || isPaused || isEmergencyBreak || isRephrasing}
                     title="AI Rephrase"
                   >
-                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
+                    {isRephrasing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
                   </Button>
                   <Button
                     onClick={handleAiSuggest}
