@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,12 +44,16 @@ const Chat = () => {
   const [isEmergencyBreak, setIsEmergencyBreak] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Add ref to track the last analyzed message
+  const lastAnalyzedMessage = useRef("");
 
-  // Real-time sensitivity analysis with debouncing
+  // Real-time sensitivity analysis with debouncing and change detection
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      if (currentMessage.trim()) {
+      if (currentMessage.trim() && currentMessage !== lastAnalyzedMessage.current) {
         setIsAnalyzing(true);
+        lastAnalyzedMessage.current = currentMessage;
         try {
           const sensitivity = await analyzeSensitivity(currentMessage);
           setCurrentSensitivity(sensitivity);
@@ -60,10 +63,11 @@ const Chat = () => {
         } finally {
           setIsAnalyzing(false);
         }
-      } else {
+      } else if (!currentMessage.trim()) {
         setCurrentSensitivity("green");
+        lastAnalyzedMessage.current = "";
       }
-    }, 1000); // Increased debounce time to 1 second to avoid rate limiting
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [currentMessage, analyzeSensitivity]);
@@ -111,6 +115,7 @@ const Chat = () => {
     setCurrentSensitivity("green");
     setShowSuggestions(false);
     setAiSuggestion("");
+    lastAnalyzedMessage.current = ""; // Reset the last analyzed message
 
     // Simulate AI response
     setTimeout(() => {
@@ -139,6 +144,7 @@ const Chat = () => {
     try {
       const rephrased = await rephraseText(currentMessage);
       setCurrentMessage(rephrased);
+      lastAnalyzedMessage.current = ""; // Reset so the rephrased message gets analyzed
       
       toast({
         title: "Message Rephrased",
@@ -310,6 +316,7 @@ const Chat = () => {
                       setCurrentMessage(aiSuggestion);
                       setShowSuggestions(false);
                       setAiSuggestion("");
+                      lastAnalyzedMessage.current = ""; // Reset so the suggestion gets analyzed
                     }}
                   >
                     "{aiSuggestion}"
