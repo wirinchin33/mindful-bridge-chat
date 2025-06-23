@@ -8,27 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useProfile } from "@/hooks/useProfile";
 
 const Profile = () => {
-  const { toast } = useToast();
+  const { profile, setProfile, loading, saving, saveProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    communicationStyle: "Direct but empathetic",
-    sensitiveTriggers: ["Loud criticism", "Sudden changes", "Financial stress"],
-    supportPreferences: ["Active listening", "Solution-focused", "Patient communication"],
-    comfortZones: ["One-on-one conversations", "Written communication", "Scheduled check-ins"],
-    emergencyContacts: ["Dr. Smith - Therapist", "Jamie - Best Friend"]
-  });
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    await saveProfile(profile);
     setIsEditing(false);
-    toast({
-      title: "Profile Updated",
-      description: "Your communication preferences have been saved successfully.",
-    });
   };
 
   const addTrigger = (trigger: string) => {
@@ -47,6 +35,49 @@ const Profile = () => {
     }));
   };
 
+  const addSupportPreference = (preference: string) => {
+    if (preference && !profile.supportPreferences.includes(preference)) {
+      setProfile(prev => ({
+        ...prev,
+        supportPreferences: [...prev.supportPreferences, preference]
+      }));
+    }
+  };
+
+  const removeSupportPreference = (preference: string) => {
+    setProfile(prev => ({
+      ...prev,
+      supportPreferences: prev.supportPreferences.filter(p => p !== preference)
+    }));
+  };
+
+  const addComfortZone = (zone: string) => {
+    if (zone && !profile.comfortZones.includes(zone)) {
+      setProfile(prev => ({
+        ...prev,
+        comfortZones: [...prev.comfortZones, zone]
+      }));
+    }
+  };
+
+  const removeComfortZone = (zone: string) => {
+    setProfile(prev => ({
+      ...prev,
+      comfortZones: prev.comfortZones.filter(z => z !== zone)
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
@@ -61,10 +92,17 @@ const Profile = () => {
             </div>
             <Button
               onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+              disabled={saving}
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
             >
-              {isEditing ? <Save className="w-4 h-4 mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
-              {isEditing ? "Save Changes" : "Edit Profile"}
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+              ) : isEditing ? (
+                <Save className="w-4 h-4 mr-2" />
+              ) : (
+                <Edit className="w-4 h-4 mr-2" />
+              )}
+              {saving ? "Saving..." : isEditing ? "Save Changes" : "Edit Profile"}
             </Button>
           </div>
         </div>
@@ -180,13 +218,44 @@ const Profile = () => {
               <CardDescription>How you like to receive support and comfort</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {profile.supportPreferences.map((pref, index) => (
                   <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
                     {pref}
+                    {isEditing && (
+                      <button
+                        onClick={() => removeSupportPreference(pref)}
+                        className="ml-2 text-green-600 hover:text-green-800"
+                      >
+                        ×
+                      </button>
+                    )}
                   </Badge>
                 ))}
               </div>
+              {isEditing && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a support preference..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        addSupportPreference(e.currentTarget.value);
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      addSupportPreference(input.value);
+                      input.value = '';
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -197,13 +266,44 @@ const Profile = () => {
               <CardDescription>Communication methods and environments where you feel most comfortable</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {profile.comfortZones.map((zone, index) => (
                   <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
                     {zone}
+                    {isEditing && (
+                      <button
+                        onClick={() => removeComfortZone(zone)}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    )}
                   </Badge>
                 ))}
               </div>
+              {isEditing && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a comfort zone..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        addComfortZone(e.currentTarget.value);
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      addComfortZone(input.value);
+                      input.value = '';
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
