@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import Assessment from "./pages/Assessment";
 import Chat from "./pages/Chat";
 import Practice from "./pages/Practice";
+import Messages from "./pages/Messages";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,11 @@ const App = () => (
             <Route path="/chat" element={
               <ProtectedRoute>
                 <Chat />
+              </ProtectedRoute>
+            } />
+            <Route path="/messages" element={
+              <ProtectedRoute>
+                <Messages />
               </ProtectedRoute>
             } />
             <Route path="/practice" element={
