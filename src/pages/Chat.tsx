@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Pause, RefreshCw, Shield, AlertTriangle, CheckCircle, Bot, Lightbulb, Zap, MessageCircle, Users, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -493,7 +492,7 @@ const Chat = () => {
                 </div>
               )}
             </div>
-          </div>
+          </CardContent>
         </Card>
       </main>
 
