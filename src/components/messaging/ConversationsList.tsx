@@ -11,7 +11,7 @@ interface Conversation {
   name: string | null;
   is_group: boolean;
   updated_at: string;
-  participants: Array<{
+  conversation_participants: Array<{
     user_id: string;
     profiles: {
       name: string;
@@ -97,7 +97,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
     if (conversation.name) return conversation.name;
     
     // For direct messages, show the other person's name
-    const otherParticipant = conversation.participants.find(
+    const otherParticipant = conversation.conversation_participants.find(
       p => p.user_id !== user?.id
     );
     
