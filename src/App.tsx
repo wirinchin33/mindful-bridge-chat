@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import Assessment from "./pages/Assessment";
+import AssessmentTest from "./pages/AssessmentTest";
 import Chat from "./pages/Chat";
 import Practice from "./pages/Practice";
 import Messages from "./pages/Messages";
@@ -39,6 +40,11 @@ const App = () => (
             <Route path="/assessment" element={
               <ProtectedRoute>
                 <Assessment />
+              </ProtectedRoute>
+            } />
+            <Route path="/assessment/:testId" element={
+              <ProtectedRoute>
+                <AssessmentTest />
               </ProtectedRoute>
             } />
             <Route path="/chat" element={
