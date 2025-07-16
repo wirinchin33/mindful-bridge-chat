@@ -106,9 +106,6 @@ const AssessmentTest = () => {
           percentage: percentage,
           severity_level: severity?.severity || null,
           completed_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,test_type',
-          ignoreDuplicates: false
         });
 
       if (error) {
