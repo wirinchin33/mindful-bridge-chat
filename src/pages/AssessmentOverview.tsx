@@ -1,11 +1,18 @@
-import { ArrowLeft, Brain, Heart, Zap, ChevronRight, CheckCircle } from "lucide-react";
+import { ArrowLeft, Brain, Heart, Zap, ChevronRight, CheckCircle, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { assessmentTests } from "@/data/assessmentTests";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AssessmentOverview = () => {
+  const { user } = useAuth();
+  const [completedTests, setCompletedTests] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+
   const testIcons = {
     phq9: Brain,
     gad7: Zap,
@@ -23,6 +30,41 @@ const AssessmentOverview = () => {
     gad7: "bg-amber-100 text-amber-800",
     who5: "bg-green-100 text-green-800"
   };
+
+  useEffect(() => {
+    const fetchCompletedTests = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('assessment_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('completed_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching assessment results:', error);
+        } else {
+          const resultsMap = data.reduce((acc, result) => {
+            if (!acc[result.test_type] || new Date(result.completed_at) > new Date(acc[result.test_type].completed_at)) {
+              acc[result.test_type] = result;
+            }
+            return acc;
+          }, {});
+          setCompletedTests(resultsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching assessment results:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletedTests();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -75,19 +117,39 @@ const AssessmentOverview = () => {
                     {test.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-slate-600 mb-6">
-                    {test.fullDescription}
-                  </p>
-                  <Link to={`/assessment/${test.id}`}>
-                    <Button 
-                      className={`w-full bg-gradient-to-r ${gradientClass} hover:opacity-90 transition-opacity group-hover:shadow-md`}
-                    >
-                      Start {test.shortTitle}
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
+                 <CardContent className="pt-0">
+                   <p className="text-sm text-slate-600 mb-4">
+                     {test.fullDescription}
+                   </p>
+                   
+                   {completedTests[test.id] && (
+                     <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                       <div className="flex items-center justify-between">
+                         <div>
+                           <p className="text-sm font-medium text-green-800">
+                             Last Score: {completedTests[test.id].score}/{completedTests[test.id].max_score}
+                           </p>
+                           <p className="text-xs text-green-600">
+                             {completedTests[test.id].severity_level}
+                           </p>
+                         </div>
+                         <div className="text-xs text-green-600 flex items-center">
+                           <Calendar className="w-3 h-3 mr-1" />
+                           {new Date(completedTests[test.id].completed_at).toLocaleDateString()}
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                   
+                   <Link to={`/assessment/${test.id}`}>
+                     <Button 
+                       className={`w-full bg-gradient-to-r ${gradientClass} hover:opacity-90 transition-opacity group-hover:shadow-md`}
+                     >
+                       {completedTests[test.id] ? `Retake ${test.shortTitle}` : `Start ${test.shortTitle}`}
+                       <ChevronRight className="w-4 h-4 ml-2" />
+                     </Button>
+                   </Link>
+                 </CardContent>
               </Card>
             );
           })}

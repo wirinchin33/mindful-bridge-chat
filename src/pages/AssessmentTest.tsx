@@ -9,16 +9,20 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { assessmentTests, type AssessmentTest } from "@/data/assessmentTests";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AssessmentTest = () => {
   const { testId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isComplete, setIsComplete] = useState(false);
   const [score, setScore] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const test: AssessmentTest | undefined = assessmentTests.find(t => t.id === testId);
 
@@ -63,7 +67,7 @@ const AssessmentTest = () => {
     }
   };
 
-  const completeAssessment = () => {
+  const completeAssessment = async () => {
     // Calculate score
     const totalScore = test.questions.reduce((sum, question) => {
       const answer = answers[question.id];
@@ -73,10 +77,53 @@ const AssessmentTest = () => {
     setScore(totalScore);
     setIsComplete(true);
 
+    // Save to Supabase
+    await saveAssessmentResult(totalScore);
+
     toast({
       title: "Assessment Complete!",
-      description: `Your ${test.shortTitle} score has been calculated.`,
+      description: `Your ${test.shortTitle} score has been calculated and saved.`,
     });
+  };
+
+  const saveAssessmentResult = async (totalScore: number) => {
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      const maxScore = test.questions.length * (test.id === 'who5' ? 5 : 3);
+      const percentage = (totalScore / maxScore) * 100;
+      const severity = getScoreSeverity(totalScore);
+
+      const { error } = await supabase
+        .from('assessment_results')
+        .upsert({
+          user_id: user.id,
+          test_type: test.id,
+          test_name: test.title,
+          score: totalScore,
+          max_score: maxScore,
+          percentage: percentage,
+          severity_level: severity?.severity || null,
+          completed_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,test_type',
+          ignoreDuplicates: false
+        });
+
+      if (error) {
+        console.error('Error saving assessment result:', error);
+        toast({
+          title: "Save Error",
+          description: "Could not save your results. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error saving assessment result:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getScoreSeverity = (score: number) => {

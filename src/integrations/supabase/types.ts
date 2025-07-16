@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessment_results: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          max_score: number
+          percentage: number
+          score: number
+          severity_level: string | null
+          test_name: string
+          test_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          max_score: number
+          percentage: number
+          score: number
+          severity_level?: string | null
+          test_name: string
+          test_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          max_score?: number
+          percentage?: number
+          score?: number
+          severity_level?: string | null
+          test_name?: string
+          test_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assessments: {
         Row: {
           answer_value: string

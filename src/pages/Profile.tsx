@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { ArrowLeft, Save, Edit } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Save, Edit, Brain, TrendingUp, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { assessmentTests } from "@/data/assessmentTests";
 
 const Profile = () => {
   const { profile, setProfile, loading, saving, saveProfile } = useProfile();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState<any[]>([]);
+  const [loadingResults, setLoadingResults] = useState(true);
 
   const handleSave = async () => {
     await saveProfile(profile);
@@ -65,6 +71,50 @@ const Profile = () => {
       ...prev,
       comfortZones: prev.comfortZones.filter(z => z !== zone)
     }));
+  };
+
+  useEffect(() => {
+    const fetchAssessmentResults = async () => {
+      if (!user) {
+        setLoadingResults(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('assessment_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('completed_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching assessment results:', error);
+        } else {
+          setAssessmentResults(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching assessment results:', error);
+      } finally {
+        setLoadingResults(false);
+      }
+    };
+
+    fetchAssessmentResults();
+  }, [user]);
+
+  const getTestDisplayName = (testType: string) => {
+    const test = assessmentTests.find(t => t.id === testType);
+    return test ? test.shortTitle : testType.toUpperCase();
+  };
+
+  const getLatestResults = () => {
+    const latest = assessmentResults.reduce((acc, result) => {
+      if (!acc[result.test_type] || new Date(result.completed_at) > new Date(acc[result.test_type].completed_at)) {
+        acc[result.test_type] = result;
+      }
+      return acc;
+    }, {});
+    return Object.values(latest);
   };
 
   if (loading) {
@@ -302,6 +352,89 @@ const Profile = () => {
                   >
                     Add
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Mental Health Assessment Results */}
+          <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-slate-800 flex items-center">
+                <Brain className="w-5 h-5 mr-2 text-purple-600" />
+                Mental Health Assessment Results
+              </CardTitle>
+              <CardDescription>Your recent assessment scores and progress</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingResults ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-slate-600">Loading your results...</p>
+                </div>
+              ) : assessmentResults.length === 0 ? (
+                <div className="text-center py-8">
+                  <Brain className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-600 mb-4">No assessment results yet</p>
+                  <Link to="/assessment">
+                    <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700">
+                      Take Your First Assessment
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {getLatestResults().map((result: any) => (
+                      <div key={result.test_type} className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-slate-800">
+                            {getTestDisplayName(result.test_type)}
+                          </h4>
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            {result.percentage.toFixed(0)}%
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Score:</span>
+                            <span className="font-medium">{result.score}/{result.max_score}</span>
+                          </div>
+                          {result.severity_level && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600">Level:</span>
+                              <span className="font-medium">{result.severity_level}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center text-xs text-slate-500">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {new Date(result.completed_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {assessmentResults.length > 3 && (
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-slate-800 flex items-center">
+                            <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
+                            Track Your Progress
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            You have {assessmentResults.length} total assessment{assessmentResults.length > 1 ? 's' : ''} completed
+                          </p>
+                        </div>
+                        <Link to="/assessment">
+                          <Button variant="outline" size="sm">
+                            View All
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
