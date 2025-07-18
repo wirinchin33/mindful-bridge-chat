@@ -28,15 +28,19 @@ const AddFriendDialog: React.FC<AddFriendDialogProps> = ({ open, onOpenChange })
 
   const addFriendMutation = useMutation({
     mutationFn: async (friendEmail: string) => {
-      // First, find the user by email
+      // First, try to find the user by email in profiles table
       const { data: friendProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, name')
         .eq('email', friendEmail)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !friendProfile) {
-        throw new Error('User not found');
+      if (profileError) {
+        throw new Error('Error searching for user');
+      }
+
+      if (!friendProfile) {
+        throw new Error('User not found. Make sure the user has signed up with this email.');
       }
 
       if (friendProfile.id === user?.id) {
